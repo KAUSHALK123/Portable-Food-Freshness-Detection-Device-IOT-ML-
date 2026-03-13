@@ -3,82 +3,185 @@ import Navbar from "./components/Navbar";
 import Landing from "./pages/Landing";
 import Dashboard from "./pages/Dashboard";
 import SetupWizard from "./components/SetupWizard";
+import Login from "./pages/Login";
+import { apiFetch, authHeaders, endpoints } from "./utils/api";
+
+const defaultSensorData = {
+  temperature: 0,
+  humidity: 0,
+  gas: 0,
+  freshness_score: 0,
+  status: "Loading",
+  food_type: "Unknown",
+  shelf_life_days: 0,
+  recommended_discount: "N/A",
+  action: "",
+};
 
 function App() {
-  // 1. View State: Control which "page" is visible
   const [currentView, setCurrentView] = useState("landing");
   const [containerCount, setContainerCount] = useState(6);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [token, setToken] = useState(localStorage.getItem("auth_token") || "");
+  const [user, setUser] = useState(null);
+  const [containers, setContainers] = useState([]);
+  const [alerts, setAlerts] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsOverview, setAnalyticsOverview] = useState(null);
+  const [analyticsMonthly, setAnalyticsMonthly] = useState(null);
 
-  // 2. Sensor Data State: This holds the live API response
-  const [sensorData, setSensorData] = useState({
-    gas: 0,
-    temperature: 0,
-    humidity: 0,
-    freshness_score: 0,
-    status: "Loading",
-    food_type: "Tomato",
-    shelf_life_days: 0
-  });
+  const [containerData, setContainerData] = useState({});
 
-  // 3. Your Fetch Logic: Integrated to run only when needed
   useEffect(() => {
+    if (!token) return;
 
-  if (currentView !== "dashboard") return;
+    const bootstrap = async () => {
+      try {
+        const profile = await apiFetch(endpoints.me, {
+          headers: authHeaders(token),
+        });
+        setUser(profile);
+        setIsLoggedIn(true);
 
-  const fetchData = () => {
-    fetch("http://127.0.0.1:8000/latest-data")
-      .then((res) => res.json())
-      .then((data) => {
-        setSensorData(data);
-      })
-      .catch((err) => console.log("Backend offline or error:", err));
-  };
+        const setup = await apiFetch(endpoints.setupConfig, {
+          headers: authHeaders(token),
+        });
 
-  fetchData();
+        if (setup.container_count > 0) {
+          setContainerCount(setup.container_count);
+          setContainers(setup.containers || []);
+          setCurrentView("dashboard");
+        } else {
+          setCurrentView("setup");
+        }
+      } catch {
+        localStorage.removeItem("auth_token");
+        setToken("");
+        setIsLoggedIn(false);
+        setUser(null);
+      }
+    };
 
-  const interval = setInterval(fetchData, 3000);
+    bootstrap();
+  }, [token]);
 
-  return () => clearInterval(interval);
+  useEffect(() => {
+    if (currentView !== "dashboard") return;
 
-}, [currentView]);
+    const fetchData = () => {
+      apiFetch(endpoints.latestData)
+        .then((res) => {
+          if (res.containers && Array.isArray(res.containers)) {
+            const dict = {};
+            for (const c of res.containers) {
+              dict[c.container_id] = c;
+            }
+            setContainerData(dict);
+          }
+        })
+        .catch((err) => console.log("Backend offline or error:", err.message));
+    };
 
-  // Handler functions
-  const handleLogin = () => {
+    fetchData();
+    const interval = setInterval(fetchData, 3000);
+    return () => clearInterval(interval);
+  }, [currentView]);
+
+  useEffect(() => {
+    if (!token || currentView !== "dashboard") return;
+
+    const fetchMeta = async () => {
+      try {
+        const [alertsRes, analyticsRes, overviewRes, monthlyRes] = await Promise.all([
+          apiFetch(endpoints.alerts, { headers: authHeaders(token) }),
+          apiFetch(endpoints.analytics, { headers: authHeaders(token) }),
+          apiFetch(endpoints.analyticsOverview, { headers: authHeaders(token) }),
+          apiFetch(endpoints.analyticsMonthly, { headers: authHeaders(token) }),
+        ]);
+
+        setAlerts(alertsRes);
+        setAnalytics(analyticsRes);
+        setAnalyticsOverview(overviewRes);
+        setAnalyticsMonthly(monthlyRes);
+      } catch (error) {
+        console.log("Metadata fetch error:", error.message);
+      }
+    };
+
+    fetchMeta();
+    const timer = setInterval(fetchMeta, 6000);
+    return () => clearInterval(timer);
+  }, [currentView, token]);
+
+  const handleAuthSuccess = (payload) => {
+    localStorage.setItem("auth_token", payload.access_token);
+    setToken(payload.access_token);
     setIsLoggedIn(true);
+    setUser(payload.user);
+    setCurrentView("setup");
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("auth_token");
+    setToken("");
+    setUser(null);
+    setIsLoggedIn(false);
+    setAlerts([]);
+    setAnalytics(null);
+    setCurrentView("landing");
+  };
+
+  const completeSetup = ({ count, containers: setupContainers }) => {
+    setContainerCount(count);
+    setContainers(setupContainers);
     setCurrentView("dashboard");
   };
 
-  const completeSetup = (count) => {
-    setContainerCount(count);
-    setCurrentView("dashboard");
+  const navigate = (view) => {
+    if (!isLoggedIn && (view === "setup" || view === "dashboard")) {
+      setCurrentView("login");
+      return;
+    }
+    setCurrentView(view);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navbar stays at the top across all views */}
+    <div className="min-h-screen bg-gradient-to-b from-emerald-50 via-white to-slate-100">
       <Navbar 
-        onNav={setCurrentView} 
-        onLogin={handleLogin} 
-        isLoggedIn={isLoggedIn} 
+        onNav={navigate}
+        onLogin={() => setCurrentView("login")}
+        onLogout={handleLogout}
+        isLoggedIn={isLoggedIn}
+        supermarketName={user?.supermarket_name}
       />
 
-      <main>
-        {/* Landing Page Section */}
+      <main className="max-w-7xl mx-auto w-full">
         {currentView === "landing" && (
-          <Landing onStart={() => setCurrentView("setup")} />
+          <Landing onStart={() => setCurrentView(isLoggedIn ? "setup" : "login")} />
         )}
 
-        {/* Setup Wizard Section */}
+        {currentView === "login" && (
+          <Login onAuthSuccess={handleAuthSuccess} />
+        )}
+
         {currentView === "setup" && (
-          <SetupWizard onComplete={completeSetup} />
+          <SetupWizard
+            token={token}
+            initialCount={containerCount}
+            initialContainers={containers}
+            onComplete={completeSetup}
+          />
         )}
 
-        {/* The Dashboard Section: We pass sensorData down here */}
         {currentView === "dashboard" && (
           <Dashboard 
-            count={containerCount} 
-            liveData={sensorData} 
+            count={containerCount}
+            containerData={containerData}
+            containers={containers}
+            alerts={alerts}
+            analytics={analytics}
+            analyticsOverview={analyticsOverview}
+            analyticsMonthly={analyticsMonthly}
           />
         )}
       </main>
