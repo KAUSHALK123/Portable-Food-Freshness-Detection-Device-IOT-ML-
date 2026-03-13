@@ -1,68 +1,88 @@
 import { useEffect, useState } from "react";
+import Navbar from "./components/Navbar";
+import Landing from "./pages/Landing";
+import Dashboard from "./pages/Dashboard";
+import SetupWizard from "./components/SetupWizard";
 
 function App() {
+  // 1. View State: Control which "page" is visible
+  const [currentView, setCurrentView] = useState("landing");
+  const [containerCount, setContainerCount] = useState(6);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const [data, setData] = useState({
+  // 2. Sensor Data State: This holds the live API response
+  const [sensorData, setSensorData] = useState({
     gas: 0,
     temperature: 0,
     humidity: 0,
     freshness_score: 0,
-    status: "Loading"
+    status: "Loading",
+    food_type: "Tomato",
+    shelf_life_days: 0
   });
 
+  // 3. Your Fetch Logic: Integrated to run only when needed
   useEffect(() => {
 
-    const fetchData = () => {
-      fetch("http://127.0.0.1:8000/latest-data")
-        .then(res => res.json())
-        .then(data => {
-          setData(data);
-        })
-        .catch(err => console.log(err));
-    };
+  if (currentView !== "dashboard") return;
 
-    fetchData();
+  const fetchData = () => {
+    fetch("http://127.0.0.1:8000/latest-data")
+      .then((res) => res.json())
+      .then((data) => {
+        setSensorData(data);
+      })
+      .catch((err) => console.log("Backend offline or error:", err));
+  };
 
-    const interval = setInterval(fetchData, 3000);
+  fetchData();
 
-    return () => clearInterval(interval);
+  const interval = setInterval(fetchData, 3000);
 
-  }, []);
+  return () => clearInterval(interval);
+
+}, [currentView]);
+
+  // Handler functions
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+    setCurrentView("dashboard");
+  };
+
+  const completeSetup = (count) => {
+    setContainerCount(count);
+    setCurrentView("dashboard");
+  };
 
   return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Navbar stays at the top across all views */}
+      <Navbar 
+        onNav={setCurrentView} 
+        onLogin={handleLogin} 
+        isLoggedIn={isLoggedIn} 
+      />
 
-    <div style={{
-      display: "flex",
-      justifyContent: "center",
-      alignItems: "center",
-      height: "100vh",
-      backgroundColor: "#f5f5f5"
-    }}>
+      <main>
+        {/* Landing Page Section */}
+        {currentView === "landing" && (
+          <Landing onStart={() => setCurrentView("setup")} />
+        )}
 
-      <div style={{
-        width: "300px",
-        padding: "20px",
-        borderRadius: "10px",
-        backgroundColor: "white",
-        boxShadow: "0 4px 10px rgba(0,0,0,0.1)"
-      }}>
+        {/* Setup Wizard Section */}
+        {currentView === "setup" && (
+          <SetupWizard onComplete={completeSetup} />
+        )}
 
-        <h2>Container 1 - Tomatoes</h2>
-
-        <p><b>Gas Level:</b> {data.gas}</p>
-
-        <p><b>Temperature:</b> {data.temperature} °C</p>
-
-        <p><b>Humidity:</b> {data.humidity} %</p>
-
-        <p><b>Freshness Score:</b> {data.freshness_score}</p>
-
-        <p><b>Status:</b> {data.status}</p>
-
-      </div>
-
+        {/* The Dashboard Section: We pass sensorData down here */}
+        {currentView === "dashboard" && (
+          <Dashboard 
+            count={containerCount} 
+            liveData={sensorData} 
+          />
+        )}
+      </main>
     </div>
-
   );
 }
 
