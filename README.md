@@ -308,6 +308,9 @@ This system helps:
 # 👨‍💻 Author
 
 **Kaushal**
+**ARYA K S**
+**Gagan M**
+**Druva A Shetty**
 
 Engineering Student | AI & Systems Enthusiast
 
