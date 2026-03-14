@@ -1,5 +1,5 @@
 # 🥬 Smart Food Spoilage Detection System
-#HARDWARE TEAM
+# HARDWARE TEAM
 ### AI-Powered Freshness Monitoring for Perishable Food
 
 ![React](https://img.shields.io/badge/Frontend-React-blue)
@@ -31,21 +31,33 @@ The platform provides **real-time freshness scores and spoilage alerts**, helpin
 *(Add your architecture diagram screenshot here)*
 
 ```
-Sensors / Camera
-       │
-       ▼
-ESP32 / IoT Device
-       │
-       ▼
-FastAPI Backend
-       │
-       ├── ML Model (Fresh / Rotten classifier)
-       │
-       ▼
-React Dashboard
-       │
-       ▼
-Real-time Monitoring & Alerts
+            Food Item
+                │
+        ┌───────┴────────┐
+        │                │
+     Camera           Sensors
+        │                │
+        │           MQ135 / MQ3
+        │           Temperature
+        │                │
+        │              ESP32
+        │                │
+        └───────┬────────┘
+                │
+         Data Processing
+                │
+        ┌───────┴────────┐
+        │                │
+    YOLOv8 Model    Random Forest
+   (image analysis) (sensor analysis)
+        │                │
+        └───────┬────────┘
+                │
+          Decision Fusion
+                │
+        Fresh / Ripe / Spoiled
+                │
+           Display Output
 ```
 
 ---
@@ -107,31 +119,21 @@ Provides useful insights including:
 
 ### 📊 Main Dashboard
 
-*(Add screenshot here)*
-
-```
-[Dashboard Screenshot]
-```
+![Main Dashboard](image.png)
 
 ---
 
 ### 📦 Container Monitoring
 
-*(Add screenshot here)*
+![Container Monitoring](image-2.png)
 
-```
-[Container Monitoring Screenshot]
-```
+![Container Monitoring Without Sensor Data](image-1.png)
 
 ---
 
 ### 📈 Analytics Panel
 
-*(Add screenshot here)*
-
-```
-[Analytics Screenshot]
-```
+![Analytics Panel](image.png)
 
 ---
 
