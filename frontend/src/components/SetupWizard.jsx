@@ -71,32 +71,40 @@ const SetupWizard = ({ token, onComplete, initialCount = 6, initialContainers = 
   };
 
   return (
-    <div className="max-w-4xl mx-auto mt-10 p-8 bg-white rounded-2xl shadow-lg border border-gray-100">
-      {step === 1 ? (
-        <div>
-          <h2 className="text-2xl font-bold mb-4">Setup Supermarket</h2>
-          <label className="block text-sm font-bold mb-2 uppercase">Number of Containers</label>
-          <input 
-            type="number" 
-            value={count}
-            min={1}
-            max={200}
-            onChange={(e) => setCount(Number(e.target.value) || 1)}
-            className="w-full border p-4 rounded-xl mb-6 outline-none focus:border-green-500" 
-          />
-          <button 
-            onClick={() => setStep(2)} 
-            className="w-full bg-green-600 text-white py-4 rounded-xl font-bold"
-          >
-            Next
-          </button>
-        </div>
-      ) : step === 2 ? (
-        <div>
-          <h2 className="text-2xl font-bold mb-2">Container Configuration</h2>
-          <p className="text-gray-500 mb-6">Define food type and sensor availability for each container.</p>
+    <div className="max-w-4xl mx-auto mt-10 p-8 bg-white rounded-2xl shadow-lg border border-gray-100 relative overflow-hidden">
+      <img
+        src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=2000&q=80"
+        alt="Supermarket background"
+        className="absolute inset-0 h-full w-full object-cover blur-[5px] scale-110 opacity-15"
+      />
+      <div className="absolute inset-0 bg-white/85" />
+      
+      <div className="relative z-10">
+        {step === 1 ? (
+          <div>
+            <h2 className="text-2xl font-bold mb-4">Setup Supermarket</h2>
+            <label className="block text-sm font-bold mb-2 uppercase">Number of Containers</label>
+            <input 
+              type="number" 
+              value={count}
+              min={1}
+              max={200}
+              onChange={(e) => setCount(Number(e.target.value) || 1)}
+              className="w-full border p-4 rounded-xl mb-6 outline-none focus:border-green-500" 
+            />
+            <button 
+              onClick={() => setStep(2)} 
+              className="w-full bg-green-600 text-white py-4 rounded-xl font-bold"
+            >
+              Next
+            </button>
+          </div>
+        ) : step === 2 ? (
+          <div>
+            <h2 className="text-2xl font-bold mb-2">Container Configuration</h2>
+            <p className="text-gray-500 mb-6">Define food type and sensor availability for each container.</p>
 
-          <div className="space-y-4 max-h-[55vh] overflow-auto pr-2">
+            <div className="space-y-4 max-h-[55vh] overflow-auto pr-2">
             {containers.map((container) => (
               <div key={container.container_index} className="border rounded-xl p-4 bg-gray-50">
                 <p className="text-xs font-bold tracking-widest text-gray-500 mb-3">CONTAINER {container.container_index}</p>
@@ -191,6 +199,7 @@ const SetupWizard = ({ token, onComplete, initialCount = 6, initialContainers = 
           </button>
         </div>
       )}
+      </div>
     </div>
   );
 };

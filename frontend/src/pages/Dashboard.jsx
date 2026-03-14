@@ -76,19 +76,20 @@ const Dashboard = ({
   const getContainerSnapshot = (containerId) => {
     const entry = containerData[containerId];
     if (!entry) {
-      return { data: null, lastSeenMs: null, hasEverReported: false };
+      return { data: null, lastSeenMs: null, hasEverReported: false, isLive: false };
     }
 
     const lastSeenMs = parseTimestampMs(entry.timestamp);
     if (!lastSeenMs) {
-      return { data: null, lastSeenMs: null, hasEverReported: true };
+      return { data: entry, lastSeenMs: null, hasEverReported: true, isLive: false };
     }
 
     const isLive = Date.now() - lastSeenMs <= SENSOR_TIMEOUT_MS;
     return {
-      data: isLive ? entry : null,
+      data: entry,
       lastSeenMs,
       hasEverReported: true,
+      isLive,
     };
   };
 
@@ -116,6 +117,7 @@ const Dashboard = ({
                 key={slot.id}
                 id={slot.id}
                 data={snapshot.data}
+                isLive={snapshot.isLive}
                 lastSeenMs={snapshot.lastSeenMs}
                 hasEverReported={snapshot.hasEverReported}
                 containerConfig={slot.config}

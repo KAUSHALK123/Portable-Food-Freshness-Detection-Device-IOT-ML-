@@ -55,7 +55,7 @@ const Login = ({ onAuthSuccess }) => {
 					}),
 				});
 
-				setInfo("Account created. Signing you in now.");
+				setInfo("Account created successfully! Logging you in...");
 			}
 
 			const loginPayload = await apiFetch(endpoints.login, {
@@ -66,10 +66,24 @@ const Login = ({ onAuthSuccess }) => {
 
 			onAuthSuccess(loginPayload);
 		} catch (apiError) {
-			setError(
-				apiError.message ||
-					"Unable to authenticate. Make sure the backend is running on port 8000."
-			);
+			const errorMsg = apiError.message || "Unable to authenticate";
+			console.error("[Login Error]", {
+				message: errorMsg,
+				endpoint: mode === "register" ? endpoints.register : endpoints.login,
+				email: form.email,
+			});
+			
+			if (errorMsg.includes("Email already registered")) {
+				setError("This email is already registered. Try logging in instead.");
+			} else if (errorMsg.includes("Invalid credentials")) {
+				setError("Email or password is incorrect. Please check and try again.");
+			} else if (errorMsg.includes("fetch")) {
+				setError(
+					"Cannot reach the backend. Ensure it's running at http://127.0.0.1:8000 and try again."
+				);
+			} else {
+				setError(errorMsg);
+			}
 		} finally {
 			setLoading(false);
 		}
@@ -78,19 +92,28 @@ const Login = ({ onAuthSuccess }) => {
 	return (
 		<div className="max-w-5xl mx-auto px-4 py-10 md:py-14">
 			<div className="grid lg:grid-cols-[1.1fr_0.9fr] gap-6 items-stretch">
-				<section className="rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-lime-500 text-white p-8 md:p-10 shadow-xl">
-					<p className="text-xs uppercase tracking-[0.35em] text-emerald-100">FreshTrack Access</p>
-					<h1 className="text-3xl md:text-5xl font-black mt-4 leading-tight">
-						Create your supermarket account and manage freshness in real time.
-					</h1>
-					<p className="mt-5 text-emerald-50/90 max-w-xl">
-						Sign up once, then log in to configure containers, watch sensor readings, and receive spoilage alerts.
-					</p>
+				<section className="rounded-3xl bg-gradient-to-br from-emerald-700 via-emerald-600 to-lime-500 text-white p-8 md:p-10 shadow-xl relative overflow-hidden">
+					<img
+						src="https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=2000&q=80"
+						alt="Supermarket background"
+						className="absolute inset-0 h-full w-full object-cover blur-[5px] scale-110 opacity-20"
+					/>
+					<div className="absolute inset-0 bg-gradient-to-br from-emerald-700/90 via-emerald-600/90 to-lime-500/90" />
+					
+					<div className="relative z-10">
+						<p className="text-xs uppercase tracking-[0.35em] text-emerald-100">FreshTrack Access</p>
+						<h1 className="text-3xl md:text-5xl font-black mt-4 leading-tight">
+							Create your supermarket account and manage freshness in real time.
+						</h1>
+						<p className="mt-5 text-emerald-50/90 max-w-xl">
+							Sign up once, then log in to configure containers, watch sensor readings, and receive spoilage alerts.
+						</p>
 
-					<div className="grid sm:grid-cols-3 gap-3 mt-8">
-						<FeaturePill label="Secure login" />
-						<FeaturePill label="JWT auth" />
-						<FeaturePill label="Live dashboard" />
+						<div className="grid sm:grid-cols-3 gap-3 mt-8">
+							<FeaturePill label="Secure login" />
+							<FeaturePill label="JWT auth" />
+							<FeaturePill label="Live dashboard" />
+						</div>
 					</div>
 				</section>
 

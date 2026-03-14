@@ -5,10 +5,21 @@ import React from 'react';
  * Each card represents ONE sensor node (container).
  *   Node sensors: DHT11 (temperature + humidity) + MQ135 (gas)
  */
-const ContainerCard = ({ id, data, lastSeenMs = null, hasEverReported = false, containerConfig, imageInfo }) => {
-  const isOnline = Boolean(data);
+const normalizeStatus = (status, isLive) => {
+  if (!isLive) return 'Offline';
+
+  const normalized = String(status || '').toLowerCase();
+  if (normalized === 'fresh') return 'Fresh';
+  if (normalized === 'moderate') return 'Consume Soon';
+  if (normalized === 'at_risk') return 'Spoiling';
+  if (normalized === 'critical') return 'Spoiled';
+  return 'Loading';
+};
+
+const ContainerCard = ({ id, data, isLive = false, lastSeenMs = null, hasEverReported = false, containerConfig, imageInfo }) => {
+  const hasData = Boolean(data);
   const foodLabel = containerConfig?.food_type || data?.food_type || 'unassigned';
-  const statusValue = isOnline ? (data.status || 'Loading') : 'Offline';
+  const statusValue = hasData ? normalizeStatus(data.status, isLive) : 'Offline';
 
   const statusClasses = {
     Fresh:         { dot: 'bg-green-500',  text: 'text-green-600',  header: 'bg-green-50 border-green-100'  },
@@ -25,7 +36,7 @@ const ContainerCard = ({ id, data, lastSeenMs = null, hasEverReported = false, c
   const imageSource = imageInfo?.source || 'placeholder';
 
   const freshnessBarColor =
-    !data ? 'bg-gray-200' :
+    !hasData ? 'bg-gray-200' :
     data.freshness_score >= 70 ? 'bg-green-500' :
     data.freshness_score >= 40 ? 'bg-yellow-400' :
     data.freshness_score >= 20 ? 'bg-orange-500' :
@@ -36,7 +47,7 @@ const ContainerCard = ({ id, data, lastSeenMs = null, hasEverReported = false, c
   return (
     <div
       className={`rounded-3xl border transition-all duration-500 bg-white ${
-        !isOnline
+        !hasData
           ? 'border-dashed border-gray-200 opacity-80'
           : 'shadow-xl shadow-gray-200/50 border-white'
       }`}
@@ -68,7 +79,7 @@ const ContainerCard = ({ id, data, lastSeenMs = null, hasEverReported = false, c
           </span>
         </div>
 
-        {isOnline ? (
+        {hasData ? (
           <>
             {/* ── Freshness Score Bar ── */}
             <div className="mb-4">
@@ -95,8 +106,8 @@ const ContainerCard = ({ id, data, lastSeenMs = null, hasEverReported = false, c
               <SensorBox label="Gas" val={data.gas} unit="ppm" />
             </div>
 
-            <p className="text-[10px] uppercase tracking-wider text-emerald-600 font-bold mb-3">
-              Live feed active
+            <p className={`text-[10px] uppercase tracking-wider font-bold mb-3 ${isLive ? 'text-emerald-600' : 'text-amber-600'}`}>
+              {isLive ? 'Live feed active' : `Stale reading • last seen ${lastSeenLabel || 'unknown'}`}
             </p>
 
             {/* ── Shelf Life + Discount ── */}

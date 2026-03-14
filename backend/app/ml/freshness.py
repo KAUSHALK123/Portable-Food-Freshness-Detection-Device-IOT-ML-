@@ -1,70 +1,62 @@
-"""
-Smart Freshness Prediction Engine
-----------------------------------
-Each container has exactly ONE sensor node:
-  - DHT11  → temperature + humidity
-  - MQ135  → gas (ppm)
-"""
+from __future__ import annotations
 
-SHELF_LIFE_TABLE: dict[str, float] = {
-    "tomato": 7.0,
-    "banana": 5.0,
-    "onion": 30.0,
-    "apple": 20.0,
-}
-_DEFAULT_SHELF_LIFE = 7.0
+import importlib.util
+from pathlib import Path
+from types import ModuleType
+from typing import Any
+
+
+_external_ml: ModuleType | None = None
+_external_mtime: float | None = None
+
+
+def _get_external_file() -> Path:
+    backend_app_dir = Path(__file__).resolve().parents[1]
+    workspace_root = backend_app_dir.parents[2]
+    return workspace_root / "mlmodel" / "freshness.py"
+
+
+def _load_external_freshness_module() -> ModuleType:
+    external_file = _get_external_file()
+
+    if not external_file.exists():
+        raise ModuleNotFoundError(
+            f"External ML freshness module not found at {external_file}"
+        )
+
+    spec = importlib.util.spec_from_file_location("external_ml_freshness", external_file)
+    if spec is None or spec.loader is None:
+        raise ModuleNotFoundError(f"Unable to load module spec from {external_file}")
+
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def _get_external_module() -> ModuleType:
+    global _external_ml, _external_mtime
+
+    external_file = _get_external_file()
+    current_mtime = external_file.stat().st_mtime
+
+    if _external_ml is None or _external_mtime != current_mtime:
+        _external_ml = _load_external_freshness_module()
+        _external_mtime = current_mtime
+
+    return _external_ml
 
 
 def predict_freshness(
     temperature: float,
     humidity: float,
     gas: int,
-    food_type: str = "unknown",
-) -> dict:
-    """
-    Compute freshness score, status, shelf-life estimate, and discount recommendation.
+    food_type: str,
+) -> dict[str, Any]:
+    external_ml = _get_external_module()
+    predict_fn = getattr(external_ml, "predict_freshness", None)
+    if not callable(predict_fn):
+        raise AttributeError(
+            "External module mlmodel/freshness.py must define predict_freshness(...)"
+        )
 
-    Freshness formula:
-        score = 100 - (gas × 0.05) - (temperature × 0.4) - (humidity × 0.2)
-        clamped to [0, 100]
-
-    Shelf-life formula:
-        env_factor = (gas × 0.02) + (temperature × 0.03)
-        remaining = base_life - env_factor   (clamped to ≥ 0)
-    """
-    score = 100.0 - (gas * 0.05) - (temperature * 0.4) - (humidity * 0.2)
-    score = max(0.0, min(100.0, score))
-
-    if score >= 70:
-        status = "Fresh"
-    elif score >= 40:
-        status = "Consume Soon"
-    elif score >= 20:
-        status = "Spoiling"
-    else:
-        status = "Spoiled"
-
-    base_life = SHELF_LIFE_TABLE.get(food_type.lower(), _DEFAULT_SHELF_LIFE)
-    env_factor = (gas * 0.02) + (temperature * 0.03)
-    shelf_life_days = max(0.0, round(base_life - env_factor, 1))
-
-    if score >= 70:
-        recommended_discount = "No discount"
-        action = "Product is fresh"
-    elif score >= 40:
-        recommended_discount = "10%"
-        action = "Monitor closely, consider minor discount"
-    elif score >= 20:
-        recommended_discount = "20%"
-        action = "Apply discount to reduce waste"
-    else:
-        recommended_discount = "40%"
-        action = "Apply significant discount or remove from shelf"
-
-    return {
-        "freshness_score": round(score, 2),
-        "status": status,
-        "shelf_life_days": shelf_life_days,
-        "recommended_discount": recommended_discount,
-        "action": action,
-    }
+    return predict_fn(temperature, humidity, gas, food_type)
