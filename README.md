@@ -1,5 +1,5 @@
 # 🥬 Smart Food Spoilage Detection System
-# HARDWARE TEAM
+# HARDWARE TEAM - AGRITRIX
 ### AI-Powered Freshness Monitoring for Perishable Food
 
 ![React](https://img.shields.io/badge/Frontend-React-blue)
