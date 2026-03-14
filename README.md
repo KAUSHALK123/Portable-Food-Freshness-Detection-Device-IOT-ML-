@@ -1,4 +1,5 @@
 # 🥬 Smart Food Spoilage Detection System
+# DEPLOYMENT LINK : "https://portable-food-freshness-detection-d.vercel.app/"
 # HARDWARE TEAM - AGRITRIX
 ### AI-Powered Freshness Monitoring for Perishable Food
 
